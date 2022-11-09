@@ -3,7 +3,7 @@
 Created on 4th of Nov 2022
 Thibaut Houdy
 
-Last edited 8th of Nov 2022
+Last edited 9th of Nov 2022
 Giorgi Kistauri
 
 """
@@ -15,6 +15,7 @@ from scipy.signal import savgol_filter, find_peaks
 import ROOT
 import argparse
 import time
+import random as rand
 b_debug = False
 b_save = False
 
@@ -46,6 +47,45 @@ def LoadParameters(track_file):
   correlation=false
   correlationFactor=0.
   andthisvalue=5
+
+def cumulative(y):
+    cumul, f_cumul = 0, []
+    f_cumul.append(0)
+    for yy in y:
+        cumul += yy
+        f_cumul.append(cumul)
+    return f_cumul
+
+def mc_function(x_ene, f_y, Ntrials):
+    new_spectrum = []
+    for i in range(Ntrials):
+        t_rand = rand.uniform(0,1)
+        max_bin = max(np.where(t_rand>f_y)[0])
+        try : 
+            true_ene = x_ene[max_bin]
+        except : 
+            true_ene = x_ene[max_bin]
+        rand_energie = rand.gauss(true_ene,0.2) 
+        new_spectrum.append(rand_energie)
+    return new_spectrum
+
+
+if __name__ == '__main__':
+
+    near_detector_spectrum = np.loadtxt('../Orsay/input.txt')
+    x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
+ 
+    y_input_cumul = cumulative(y_input)
+    y_input_cumul = y_input_cumul/max(y_input_cumul )
+    model_incoming_flux = mc_function(x, y_input_cumul, 1e5)
+
+    y_spec, x_spec = np.histogram(model_incoming_flux, bins=50)
+
+    plt.plot(x_spec[:-1], 2*y_spec/sum(y_spec), label="after")
+    plt.plot(x, y/sum(y), label="before")
+    plt.legend(loc='best')
+    plt.show()
+
 
 #For muon neutrino to electron neutrino oscillation probability
 
@@ -83,39 +123,41 @@ a1 = 1/3500  # GfNe/sqrt(2) for neutrinos
 a2 = - 1/3500  # -GfNe/sqrt(2) for antineutrinos
 
 #for NO
-c1 = pow(np.sin(theta23_no),2)*pow(np.sin(2*theta13_no),2)
+c1 = np.sin(theta23_no)**2*np.sin(2*theta13_no)**2
 c2 = np.sin(2*theta23_no)*np.sin(2*theta13_no)*np.sin(2*theta12_no)
-c3 = pow(np.cos(theta23_no),2)*pow(np.sin(2*theta12_no),2)
+c3 = np.cos(theta23_no)**2*np.sin(2*theta12_no)**2
 
 #for IO
-c4 = pow(np.sin(theta23_io),2)*pow(np.sin(2*theta13_io),2)
+c4 = np.sin(theta23_io)**2*np.sin(2*theta13_io)**2
 c5 = np.sin(2*theta23_io)*np.sin(2*theta13_io)*np.sin(2*theta12_io)
-c6 = pow(np.cos(theta23_io),2)*pow(np.sin(2*theta12_io),2)
+c6 = np.cos(theta23_io)**2*np.sin(2*theta12_io)**2
 
-
-def p_NO(E,dCP,a):  #  calculate oscillation probability (Normal Ordering)  [E]-GeV, [L]-km, deltaCP & a 
+#  calculate oscillation probability (Normal Ordering)  [E]-GeV, [L]-km, deltaCP & a
+def p_NO(E,dCP,a):   
     deltaCP_no = np.radians(dCP)
 
     # p for NO
-    P_NO = c1 * pow(np.sin(D31(E)-a*L),2)/(pow(D31(E)-a*L,2)) * pow(D31(E),2) \
+    P_NO = c1 * np.sin(D31(E)-a*L)**2/(D31(E)-a*L)**2 * D31(E)**2 \
                   + c2 *np.sin(D31(E)-a*L)/(D31(E)-a*L)*D31(E)*np.sin(a*L)/a/L \
-                    * D21(E)*np.cos(D31(E)+deltaCP_no) + c3*pow(D21(E),2)*pow(np.sin(a*L),2)/pow(a*L,2) 
+                    * D21(E)*np.cos(D31(E)+deltaCP_no) + c3*D21(E)**2*np.sin(a*L)**2/(a*L)**2
     return P_NO
-    
-def p_IO(E,dCP,a):  # Same for Inverted Ordering
+
+# Same for Inverted Ordering    
+def p_IO(E,dCP,a):  
     deltaCP_io=np.radians(dCP)
     # p for IO               
-    P_IO = c4 * pow(np.sin(D32(E)-a*L),2)/(pow(D32(E)-a*L,2)) * pow(D32(E),2) \
+    P_IO = c4 * np.sin(D32(E)-a*L)**2/(D32(E)-a*L)**2 * D32(E)**2 \
                   + c5 *np.sin(D32(E)-a*L)/(D32(E)-a*L)*D32(E)*np.sin(a*L)/a/L \
-                    * D21(E)*np.cos(D32(E)+deltaCP_io) + c6*pow(D21(E),2)*pow(np.sin(a*L),2)/pow(a*L,2)                 
+                    * D21(E)*np.cos(D32(E)+deltaCP_io) + c6*(D21(E))**2*np.sin(a*L)**2/(a*L)**2                 
     return P_IO
-
 
 
 e = np.arange(0.1, 10., 0.001) #Neutrino energy uniform 0-10 GeV 
 #print(p)
-plt.figure(1) 
 
+'''
+#visualize
+plt.figure(1) 
 plt.subplot(221)
 #dCP & a positive for neutrinos
 plt.plot(e,p_NO(e,0, a1),color='g', label='d_CP = 0')
@@ -136,7 +178,6 @@ plt.plot(e,p_NO(e,0,a2), color='g',label='d_CP = 0')
 plt.plot(e,p_NO(e,-90, a2), color='r', label='d_CP = pi/2')
 plt.plot(e,p_NO(e,90,a2), color='b',label='d_CP = -pi/2')
 plt.plot(e,p_NO(e,-180, a2), color='orange', label='d_CP = pi')
-
 plt.xlim([0.5, 10])
 plt.ylim([0, 0.2])
 #plt.xlabel('Energy')
@@ -172,5 +213,6 @@ plt.ylabel('Probability')
 plt.xscale('log')
 plt.title("Antineutrino_IO")
 plt.legend()
-plt.show()
-
+#plt.show()
+#plt.savefig('osc_pic.png', bbox_inches='tight')
+'''
