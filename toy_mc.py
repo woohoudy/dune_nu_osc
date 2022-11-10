@@ -58,34 +58,25 @@ def cumulative(y):
 
 def mc_function(x_ene, f_y, Ntrials):
     new_spectrum = []
-    for i in range(Ntrials):
+    for i in range(int(Ntrials)):
         t_rand = rand.uniform(0,1)
         max_bin = max(np.where(t_rand>f_y)[0])
         try : 
             true_ene = x_ene[max_bin]
-        except : 
-            true_ene = x_ene[max_bin]
-        rand_energie = rand.gauss(true_ene,0.2) 
-        new_spectrum.append(rand_energie)
+            rand_energie = rand.gauss(true_ene,0.2) 
+            new_spectrum.append(rand_energie)
+        except : continue
+            #true_ene = x_ene[max_bin]           
     return new_spectrum
 
+def D31(E):
+  return(1.267*delta_m31*L/E)
 
-if __name__ == '__main__':
+def D21(E):
+  return(1.267*delta_m21*L/E)
 
-    near_detector_spectrum = np.loadtxt('../Orsay/input.txt')
-    x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
- 
-    y_input_cumul = cumulative(y_input)
-    y_input_cumul = y_input_cumul/max(y_input_cumul )
-    model_incoming_flux = mc_function(x, y_input_cumul, 1e5)
-
-    y_spec, x_spec = np.histogram(model_incoming_flux, bins=50)
-
-    plt.plot(x_spec[:-1], 2*y_spec/sum(y_spec), label="after")
-    plt.plot(x, y/sum(y), label="before")
-    plt.legend(loc='best')
-    plt.show()
-
+def D32(E):
+  return(1.267*delta_m32*L/E)  
 
 #For muon neutrino to electron neutrino oscillation probability
 
@@ -108,16 +99,7 @@ theta12_io =np.radians(33.45)
 theta13_io =np.radians(8.6)
 theta23_io =np.radians(49.5)
 #deltaCP_io =np.radians(287)
-delta_m32 =-2.498*pow(10,-3) #in eV^2
-
-def D31(E):
-  return(1.267*delta_m31*L/E)
-
-def D21(E):
-  return(1.267*delta_m21*L/E)
-
-def D32(E):
-  return(1.267*delta_m32*L/E)  
+delta_m32 =-2.498*pow(10,-3) #in eV^2  
 
 a1 = 1/3500  # GfNe/sqrt(2) for neutrinos
 a2 = - 1/3500  # -GfNe/sqrt(2) for antineutrinos
@@ -152,23 +134,65 @@ def p_IO(E,dCP,a):
     return P_IO
 
 
-e = np.arange(0.1, 10., 0.001) #Neutrino energy uniform 0-10 GeV 
-#print(p)
+
+
+if __name__ == '__main__':
+
+    near_detector_spectrum = np.loadtxt('/home/gk/Orsay/input.txt')
+    far_detector_spectrum = np.loadtxt('../output.txt')
+    x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
+    x_output, y_output = [i[0] for i in far_detector_spectrum], [i[1] for i in far_detector_spectrum]
+
+    y_input_cumul = cumulative(y_input)
+    y_input_cumul = y_input_cumul/max(y_input_cumul )
+    model_incoming_flux = np.array(mc_function(x_input, y_input_cumul, 1e5))
+    #print(model_incoming_flux)
+    y_spec, x_spec = np.histogram(model_incoming_flux, bins=50)
+    x_after = x_spec[:-1]
+    y_after = 2*y_spec
+    #print(y_after)
+
+
+    #print(sum(y_input),sum(y_spec))
+
+    # spectrum at FD
+    plt.plot(x_after, y_after*p_NO(x_after,0, a1), color ='g' ,label="d_CP=0")
+    plt.plot(x_after, y_after*p_NO(x_after,90, a1), color ='r', label="d_CP=pi/2")
+    plt.plot(x_after, y_after*p_NO(x_after,-90, a1), color = 'b',label="d_CP=-pi/2")
+    plt.plot(x_after, y_after*p_NO(x_after,180, a1), color = 'orange',label="d_CP=pi")
+    #plt.plot(x_output,y_output/sum(y_output), label = "output")
+    #plt.plot(x_spec[:-1], 2*y_spec, label="after")
+    #plt.plot(x_input , y_input/sum(y_input), label="before")
+    #plt.plot(x_after, y_after, label="after")
+    plt.legend(loc='best')
+    plt.show()
+
+
+
+
+
 
 '''
+#e = np.arange(0.1, 10., 0.001) #Neutrino energy uniform 0-10 GeV 
+model_incoming_flux = np.array(model_incoming_flux)
+e = np.sort(model_incoming_flux)
+#print(type(e))
+#print(p)
+
+
 #visualize
-plt.figure(1) 
-plt.subplot(221)
+plt.figure(1) #Ntrials
+#plt.subplot(221)
 #dCP & a positive for neutrinos
 plt.plot(e,p_NO(e,0, a1),color='g', label='d_CP = 0')
 plt.plot(e,p_NO(e,90,a1),color='r', label='d_CP = pi/2')
 plt.plot(e,p_NO(e,-90,a1), color='b',label='d_CP = -pi/2')
 plt.plot(e,p_NO(e,180,a1), color='orange',label='d_CP = pi') 
-plt.xlim([0.5, 10])
+plt.xlim([0, 6])
 plt.ylim([0, 0.2])
 #plt.xlabel('Energy')
 plt.ylabel('Probability')
-plt.xscale('log')
+#plt.xscale('log')
 plt.title("Neutrino_NO")
 plt.legend()
 
@@ -178,11 +202,11 @@ plt.plot(e,p_NO(e,0,a2), color='g',label='d_CP = 0')
 plt.plot(e,p_NO(e,-90, a2), color='r', label='d_CP = pi/2')
 plt.plot(e,p_NO(e,90,a2), color='b',label='d_CP = -pi/2')
 plt.plot(e,p_NO(e,-180, a2), color='orange', label='d_CP = pi')
-plt.xlim([0.5, 10])
+plt.xlim([0, 6])
 plt.ylim([0, 0.2])
 #plt.xlabel('Energy')
 plt.ylabel('Probability')
-plt.xscale('log')
+#plt.xscale('log')
 plt.title("Antineutrino_NO")
 plt.legend()
 
@@ -192,11 +216,11 @@ plt.plot(e,p_IO(e,0, a1),color='g', label='d_CP = 0')
 plt.plot(e,p_IO(e,90,a1),color='r', label='d_CP = pi/2') 
 plt.plot(e,p_IO(e,-90, a1),color='b', label='d_CP = -pi/2')
 plt.plot(e,p_IO(e,180,a1),color='orange', label='d_CP = pi') 
-plt.xlim([0.5, 10])
+plt.xlim([0, 6])
 plt.ylim([0, 0.2])
 plt.xlabel('Energy')
 plt.ylabel('Probability')
-plt.xscale('log')
+#plt.xscale('log')
 plt.title("Neutrino_IO")
 plt.legend()
 
@@ -206,13 +230,14 @@ plt.plot(e,p_IO(e,0,a2), color='g',label='d_CP = 0')
 plt.plot(e,p_IO(e,-90, a2), color='r', label='d_CP = pi/2')
 plt.plot(e,p_IO(e,90,a2), color='b',label='d_CP = -pi/2')
 plt.plot(e,p_IO(e,-180, a2), color='orange', label='d_CP = pi')
-plt.xlim([0.5, 10])
+plt.xlim([0, 6])
 plt.ylim([0, 0.2])
 plt.xlabel('Energy')
 plt.ylabel('Probability')
-plt.xscale('log')
+#plt.xscale('log')
 plt.title("Antineutrino_IO")
 plt.legend()
-#plt.show()
-#plt.savefig('osc_pic.png', bbox_inches='tight')
+
+plt.show()
+plt.savefig('osc_pic.png', bbox_inches='tight')
 '''
