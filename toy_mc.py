@@ -50,7 +50,7 @@ def LoadParameters(track_file):
 
 def cumulative(y):
     cumul, f_cumul = 0, []
-    f_cumul.append(0)
+    #f_cumul.append(0)
     for yy in y:
         cumul += yy
         f_cumul.append(cumul)
@@ -60,10 +60,10 @@ def mc_function(x_ene, f_y, Ntrials):
     new_spectrum = []
     for i in range(int(Ntrials)):
         t_rand = rand.uniform(0,1)
-        max_bin = max(np.where(t_rand>f_y)[0])
+        min_bin = min(np.where(t_rand<f_y)[0])
         try : 
-            true_ene = x_ene[max_bin]
-            rand_energie = rand.gauss(true_ene,0.2) 
+            true_ene = x_ene[min_bin]
+            rand_energie = rand.gauss(true_ene,0.3) 
             new_spectrum.append(rand_energie)
         except : continue
             #true_ene = x_ene[max_bin]           
@@ -137,33 +137,34 @@ def p_IO(E,dCP,a):
 
 
 if __name__ == '__main__':
-
-    near_detector_spectrum = np.loadtxt('/home/gk/Orsay/input.txt')
+    N = 1e7
+    near_detector_spectrum = np.loadtxt('../input.txt')
     far_detector_spectrum = np.loadtxt('../output.txt')
     x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
     x_output, y_output = [i[0] for i in far_detector_spectrum], [i[1] for i in far_detector_spectrum]
 
     y_input_cumul = cumulative(y_input)
     y_input_cumul = y_input_cumul/max(y_input_cumul )
-    model_incoming_flux = np.array(mc_function(x_input, y_input_cumul, 1e5))
+    model_incoming_flux = np.array(mc_function(x_input, y_input_cumul, N))
     #print(model_incoming_flux)
     y_spec, x_spec = np.histogram(model_incoming_flux, bins=50)
     x_after = x_spec[:-1]
-    y_after = 2*y_spec
+    y_after = 1.8*y_spec
     #print(y_after)
 
 
     #print(sum(y_input),sum(y_spec))
 
     # spectrum at FD
-    plt.plot(x_after, y_after*p_NO(x_after,0, a1), color ='g' ,label="d_CP=0")
-    plt.plot(x_after, y_after*p_NO(x_after,90, a1), color ='r', label="d_CP=pi/2")
-    plt.plot(x_after, y_after*p_NO(x_after,-90, a1), color = 'b',label="d_CP=-pi/2")
-    plt.plot(x_after, y_after*p_NO(x_after,180, a1), color = 'orange',label="d_CP=pi")
+    plt.plot(x_after, y_after*p_NO(x_after,0, a1)/N, color ='g' ,label="d_CP=0")
+    plt.plot(x_after, y_after*p_NO(x_after,90, a1)/N, color ='r', label="d_CP=pi/2")
+    plt.plot(x_after, y_after*p_NO(x_after,-90, a1)/N, color = 'b',label="d_CP=-pi/2")
+    plt.plot(x_after, y_after*p_NO(x_after,180, a1)/N, color = 'orange',label="d_CP=pi")
     #plt.plot(x_output,y_output/sum(y_output), label = "output")
     #plt.plot(x_spec[:-1], 2*y_spec, label="after")
     #plt.plot(x_input , y_input/sum(y_input), label="before")
-    #plt.plot(x_after, y_after, label="after")
+    #plt.plot(x_after, y_after/sum(y_spec), label="after")
+    plt.xlim([0.2,7])
     plt.legend(loc='best')
     plt.show()
 
