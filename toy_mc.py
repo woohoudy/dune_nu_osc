@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os, sys, re
 from scipy.signal import savgol_filter, find_peaks
-import ROOT
+#import ROOT
 import argparse
 import time
 import random as rand
@@ -56,7 +56,7 @@ def cumulative(y):
         f_cumul.append(cumul)
     return f_cumul
 
-def mc_function(x_ene, f_y, Ntrials):
+def mc_function(x_ene, f_y, Ntrials): #generate energy spectrum for near or far detector
     new_spectrum = []
     for i in range(int(Ntrials)):
         t_rand = rand.uniform(0,1)
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     #print(model_incoming_flux)
     y_spec, x_spec = np.histogram(model_incoming_flux, bins=50)
     x_after = x_spec[:-1]
-    y_after = 2*y_spec
+    y_after = 1.9*y_spec
     #print(y_after)
 
 
