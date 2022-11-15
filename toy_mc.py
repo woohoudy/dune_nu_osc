@@ -3,7 +3,7 @@
 Created on 4th of Nov 2022
 Thibaut Houdy
 
-Last edited 9th of Nov 2022
+Last edited 15th of Nov 2022
 Giorgi Kistauri
 
 """
@@ -56,7 +56,7 @@ def cumulative(y):
         f_cumul.append(cumul)
     return f_cumul
 
-def mc_function(x_ene, f_y, Ntrials): #generate energy spectrum for near or far detector
+def mc_function(x_ene, f_y, Ntrials,sigma): #generate energy spectrum for near or far detector
     new_spectrum = []
     for i in range(int(Ntrials)):
         t_rand = rand.uniform(0,1)
@@ -65,7 +65,7 @@ def mc_function(x_ene, f_y, Ntrials): #generate energy spectrum for near or far 
         try : 
             true_ene1 = x_ene[max_bin]
             #true_ene2 = x_ene[min_bin]
-            rand_energie = rand.gauss(true_ene1,0.3)
+            rand_energie = rand.gauss(true_ene1,sigma)
             #rand_energie = rand.gauss(true_ene2,0.25)        
             #rand_energie = rand.uniform(true_ene1,true_ene2)
             if rand_energie > 0:
@@ -138,39 +138,55 @@ def p_IO(E,dCP,a):
                     * D21(E)*np.cos(D32(E)+deltaCP_io) + c6*(D21(E))**2*np.sin(a*L)**2/(a*L)**2                 
     return P_IO
 
+#simulate neutrino flux using measured energy spectrum
+def model_flux(x,y,N,sigma):
+    #spectrum = np.loadtxt(txtfile)
+    #x, y = [i[0] for i in spectrum], [i[1] for i in spectrum]
+    y_cumul = cumulative(y)
+    y_cumul = y_cumul/max(y_cumul)
+    flux = np.array(mc_function(x,y_cumul,N,sigma))
+    return flux
+
+
 
 
 
 if __name__ == '__main__':
-    N = 1e6
+    alpha1 = 0.0165   #including efficiency, flux and sigma
+    alpha2 = 0.02
+    alpha3 = 0.0135
+    alpha4 = 0.0155
+    N_ND = 1.5*1e6
+    N_FD = 1e3
     near_detector_spectrum = np.loadtxt('../input.txt')
     far_detector_spectrum = np.loadtxt('../output.txt')
     x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
     x_output, y_output = [i[0] for i in far_detector_spectrum], [i[1] for i in far_detector_spectrum]
 
-    y_input_cumul = cumulative(y_input)
-    y_input_cumul = y_input_cumul/max(y_input_cumul )
-    model_incoming_flux = np.array(mc_function(x_input, y_input_cumul, N))
-    #print(model_incoming_flux)
-    y_spec, x_spec = np.histogram(model_incoming_flux, bins=50)
+    y_spec, x_spec = np.histogram(model_flux(x_input,y_input,N_ND,0.3), bins=50)
+    #y_s, x_s = np.histogram(model_flux(x_output,y_output,N_FD,0.3),bins = 25)
+
     x_after = x_spec[:-1]
     y_after = 1.9*y_spec
+    #x_final = x_s[:-1]
+    #y_final = y_s
     #print(y_after)
-
-
-    #print(sum(y_input),sum(y_spec))
-
+    
     # spectrum at FD
-    #plt.plot(x_after, y_after*p_NO(x_after,0, a1), color ='g' ,label="d_CP=0")
-    #plt.plot(x_after, y_after*p_NO(x_after,90, a1), color ='r', label="d_CP=pi/2")
-    #plt.plot(x_after, y_after*p_NO(x_after,-90, a1), color = 'b',label="d_CP=-pi/2")
-    #plt.plot(x_after, y_after*p_NO(x_after,180, a1), color = 'orange',label="d_CP=pi")
-    #plt.plot(x_output,y_output/sum(y_output), label = "output")
-    #plt.plot(x_spec[:-1], 2*y_spec, label="after")
-    plt.plot(x_input , y_input/sum(y_input), label="before")
-    plt.plot(x_after, y_after/sum(y_spec), label="after")
+    plt.plot(x_output, y_output, label="measured")
+    plt.plot(x_after, y_after*p_NO(x_after,0, a1)*alpha1, color ='g' ,label="model for d_CP=0")
+    plt.plot(x_after, y_after*p_NO(x_after,90, a1)*alpha2, color ='r', label="d_CP=pi/2")
+    plt.plot(x_after, y_after*p_NO(x_after,-90, a1)*alpha3, color = 'b',label="d_CP=-pi/2")
+    plt.plot(x_after, y_after*p_NO(x_after,180, a1)*alpha4, color = 'orange',label="d_CP=pi")
+
+    #plt.plot(x_input , y_input/sum(y_input), label="before")
+    #plt.plot(x_after, y_after, label="after")
+
+    #plt.plot(x_output , y_output/sum(y_output), label="before")
+    #plt.plot(x_final, y_final/sum(y_s), label="after")
+
     plt.xlim([0.2,7])
-    #plt.ylim([0,10000])
+    plt.ylim([0,300])
     plt.legend(loc='best')
     plt.title("Spectrum at FD")
     plt.show()
