@@ -16,6 +16,9 @@ from scipy.signal import savgol_filter, find_peaks
 import argparse
 import time
 import random as rand
+#import uncertainties as u
+from uncertainties import unumpy as unp
+from uncertainties import ufloat as ufl 
 b_debug = False
 b_save = False
 
@@ -24,29 +27,12 @@ Usage:
 py toy_mc.py -i                                                           #To get info about the soft usage
 '''
 
-
 def defineParser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--infos', dest="info", action="store_true", default=False, help='get informations')
     args = parser.parse_args()
     return args
 
-def LoadParameters(track_file):
-  
-  POT = 6e20
-  InitalErrorOnFlux = 0.1
-  InitalErrorOnSigma = 0.2
-  fluxMean = 1.92e13/1e21
-  sigmaMean = 2.5e-9
-  ErrorOnFlux =  InitalErrorOnFlux*fluxMean
-  ErrorOnSigma = InitalErrorOnSigma*sigmaMean
-  bckNear=3000
-  bckFar=200
-  backgroundActivated=false
-  silence=false
-  correlation=false
-  correlationFactor=0.
-  andthisvalue=5
 
 def cumulative(y):
     cumul, f_cumul = 0, []
@@ -56,88 +42,83 @@ def cumulative(y):
         f_cumul.append(cumul)
     return f_cumul
 
-def mc_function(x_ene, f_y, Ntrials,sigma): #generate energy spectrum for near or far detector
-    new_spectrum = []
+#generate energy spectrum for near or far detector
+def mc_function(x_ene, f_y, Ntrials, sigma): 
+    new_spectrum =[]
+#    uncertainty = 0.15
     for i in range(int(Ntrials)):
         t_rand = rand.uniform(0,1)
-        #min_bin = min(np.where(t_rand<f_y)[0])
         max_bin = max(np.where(t_rand>f_y)[0])
         try : 
-            true_ene1 = x_ene[max_bin]
-            #true_ene2 = x_ene[min_bin]
-            rand_energie = rand.gauss(true_ene1,sigma)
-            #rand_energie = rand.gauss(true_ene2,0.25)        
-            #rand_energie = rand.uniform(true_ene1,true_ene2)
-            if rand_energie > 0:
-                new_spectrum.append(rand_energie)
-        except : continue
-            #true_ene = x_ene[max_bin]           
+            true_ene = x_ene[max_bin]
+            #rint(true_ene)
+            rand_energie = rand.gauss(true_ene,sigma)
+            if rand_energie > 0.5:
+                new_energie = rand.gauss(rand_energie,0.15)
+                #print(new_energie)
+                if new_energie > 0.5:
+                    new_spectrum.append(new_energie)
+        except : 
+            continue
+    #print(new_spectrum)
     return new_spectrum
 
-def D31(E):
-  return(1.267*delta_m31*L/E)
 
-def D21(E):
-  return(1.267*delta_m21*L/E)
 
-def D32(E):
-  return(1.267*delta_m32*L/E)  
+def load_parameters(b_normal_hierarchy):
 
-#For muon neutrino to electron neutrino oscillation probability
+    #For muon neutrino to electron neutrino oscillation probability
+    #oscillation parameters from NuFit 5.1    
+    # normal order parameters
+    if b_normal_hierarchy:
+        theta12 = np.radians(33.44)
+        theta13 = np.radians(8.57)
+        theta23 = np.radians(49.2)
+        bestfit_delta_CP = np.radians(194)
+        delta_m3l = 2.515*pow(10,-3) #in eV^2
+    else: 
+    # inverted order parameters
+        theta12 = np.radians(33.45)
+        theta13 = np.radians(8.6)
+        theta23 = np.radians(49.5)
+        bestfit_delta_CP = np.radians(287)
+        delta_m3l = -2.498*pow(10,-3)
+    c1 = np.sin(theta23)**2*np.sin(2*theta13)**2
+    c2 = np.sin(2*theta23)*np.sin(2*theta13)*np.sin(2*theta12)
+    c3 = np.cos(theta23)**2*np.sin(2*theta12)**2
 
-L = 1285 # Length in Km
 
-#oscillation parameters from NuFit 5.1
-
-delta_m21=7.42*pow(10,-5) #in eV^2
-
-# normal order parameters
-theta12_no =np.radians(33.44)
-theta13_no =np.radians(8.57)
-theta23_no =np.radians(49.2)
-#deltaCP_no =np.radians(194)
-delta_m31 = 2.515*pow(10,-3) #in eV^2
-
-# inverted order parameters
-
-theta12_io =np.radians(33.45)
-theta13_io =np.radians(8.6)
-theta23_io =np.radians(49.5)
-#deltaCP_io =np.radians(287)
-delta_m32 =-2.498*pow(10,-3) #in eV^2  
-
-a1 = 1/3500  # GfNe/sqrt(2) for neutrinos
-a2 = - 1/3500  # -GfNe/sqrt(2) for antineutrinos
-
-#for NO
-c1 = np.sin(theta23_no)**2*np.sin(2*theta13_no)**2
-c2 = np.sin(2*theta23_no)*np.sin(2*theta13_no)*np.sin(2*theta12_no)
-c3 = np.cos(theta23_no)**2*np.sin(2*theta12_no)**2
-
-#for IO
-c4 = np.sin(theta23_io)**2*np.sin(2*theta13_io)**2
-c5 = np.sin(2*theta23_io)*np.sin(2*theta13_io)*np.sin(2*theta12_io)
-c6 = np.cos(theta23_io)**2*np.sin(2*theta12_io)**2
+    return c1, c2, c3, bestfit_delta_CP, delta_m3l
 
 #  calculate oscillation probability (Normal Ordering)  [E]-GeV, [L]-km, deltaCP & a
-def p_NO(E,dCP,a):   
-    deltaCP_no = np.radians(dCP)
 
-    # p for NO
-    P_NO = c1 * np.sin(D31(E)-a*L)**2/(D31(E)-a*L)**2 * D31(E)**2 \
-                  + c2 *np.sin(D31(E)-a*L)/(D31(E)-a*L)*D31(E)*np.sin(a*L)/a/L \
-                    * D21(E)*np.cos(D31(E)+deltaCP_no) + c3*D21(E)**2*np.sin(a*L)**2/(a*L)**2
-    return P_NO
+def probability_oscillation(E, dCP, b_neutrino, b_normal_hierarchy):   
 
-# Same for Inverted Ordering    
-def p_IO(E,dCP,a):  
-    deltaCP_io=np.radians(dCP)
-    # p for IO               
-    P_IO = c4 * np.sin(D32(E)-a*L)**2/(D32(E)-a*L)**2 * D32(E)**2 \
-                  + c5 *np.sin(D32(E)-a*L)/(D32(E)-a*L)*D32(E)*np.sin(a*L)/a/L \
-                    * D21(E)*np.cos(D32(E)+deltaCP_io) + c6*(D21(E))**2*np.sin(a*L)**2/(a*L)**2                 
-    return P_IO
+    c1, c2, c3, bestfit_delta_CP , delta_m3l = load_parameters(b_normal_hierarchy)
+   
+    L = 1000 # Length in Km
+    delta_m21= 7.42*pow(10,-5) #in eV^2
 
+    def D3l(E):
+      return(1.267*delta_m3l*L/E)
+
+    def D21(E):
+      return(1.267*delta_m21*L/E)
+
+    if b_neutrino :
+        matter_effect = 1/3500  # GfNe/sqrt(2) for neutrino    
+    else: 
+        matter_effect = - 1/3500  # -GfNe/sqrt(2) for antineutrinos
+        dCP = -dCP
+
+   
+    Proba = c1 * np.sin(D3l(E)-matter_effect*L)**2/(D3l(E)-matter_effect*L)**2 * D3l(E)**2 \
+                  + c2 *np.sin(D3l(E)-matter_effect*L)/(D3l(E)-matter_effect*L)*D3l(E)*np.sin(matter_effect*L)/matter_effect/L \
+                    * D21(E)*np.cos(D3l(E)+np.radians(dCP)) + c3*D21(E)**2*np.sin(matter_effect*L)**2/(matter_effect*L)**2
+    
+    return Proba
+
+'''
 #simulate neutrino flux using measured energy spectrum
 def model_flux(x,y,N,sigma):
     #spectrum = np.loadtxt(txtfile)
@@ -147,54 +128,104 @@ def model_flux(x,y,N,sigma):
     flux = np.array(mc_function(x,y_cumul,N,sigma))
     return flux
 
-
-
-
+ 
 
 if __name__ == '__main__':
-    alpha1 = 0.0165   #including efficiency, flux and sigma
-    alpha2 = 0.02
-    alpha3 = 0.0135
-    alpha4 = 0.0155
-    N_ND = 1.5*1e6
+
+    N_ND = 1e7
     N_FD = 1e3
+
     near_detector_spectrum = np.loadtxt('../input.txt')
     far_detector_spectrum = np.loadtxt('../output.txt')
-    x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
+
+    x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1]*1e6 for i in near_detector_spectrum]
     x_output, y_output = [i[0] for i in far_detector_spectrum], [i[1] for i in far_detector_spectrum]
 
-    y_spec, x_spec = np.histogram(model_flux(x_input,y_input,N_ND,0.3), bins=50)
+    fig, axs = plt.subplots(1, 1, constrained_layout=True, figsize=(10, 4))
+    scale_factor = np.sum(y_input)/np.sum(y_output)
+    axs.errorbar(x_input, y_input, np.sqrt(y_input), [(x_input[1]-x_input[0])/4 for _ in x_input],label='input')
+    axs.errorbar(x_output, np.array(y_output)*scale_factor, np.sqrt(np.array(y_output))*scale_factor, [(x_output[1]-x_output[0])/4 for _ in x_output], label='output')
+
+
+
+ 
+
+    y_spec, x_spec = np.histogram(model_flux(x_input,y_input,N_ND,0.3), bins=50, range=[0.5,6])
     #y_s, x_s = np.histogram(model_flux(x_output,y_output,N_FD,0.3),bins = 25)
 
     x_after = x_spec[:-1]
     y_after = 1.9*y_spec
-    #x_final = x_s[:-1]
-    #y_final = y_s
-    #print(y_after)
-    
+
+    # compare input and simulated energies
+    #fig, axs = plt.subplots(1, 1, constrained_layout=True, figsize=(10, 4))
+    #axs.plot(x_input, y_input/max(y_input),label='input')
+    #axs.plot(x_after, y_after/max(y_after),label='simulated')
+    #axs.legend(loc='best')
+
+
     # spectrum at FD
-    plt.plot(x_output, y_output, label="measured")
-    plt.plot(x_after, y_after*p_NO(x_after,0, a1)*alpha1, color ='g' ,label="model for d_CP=0")
-    plt.plot(x_after, y_after*p_NO(x_after,90, a1)*alpha2, color ='r', label="d_CP=pi/2")
-    plt.plot(x_after, y_after*p_NO(x_after,-90, a1)*alpha3, color = 'b',label="d_CP=-pi/2")
-    plt.plot(x_after, y_after*p_NO(x_after,180, a1)*alpha4, color = 'orange',label="d_CP=pi")
+    models = [  y_after*probability_oscillation(x_after,0, b_neutrino=True, b_normal_hierarchy=True),
+                y_after*probability_oscillation(x_after,90, b_neutrino=True, b_normal_hierarchy=True),
+                y_after*probability_oscillation(x_after,-90, b_neutrino=True, b_normal_hierarchy=True),
+                y_after*probability_oscillation(x_after,180, b_neutrino=True, b_normal_hierarchy=True)]
 
-    #plt.plot(x_input , y_input/sum(y_input), label="before")
-    #plt.plot(x_after, y_after, label="after")
+    model_labels = ["$\delta_{CP}=0$", "$\delta_{CP}=\pi/2$", "$\delta_{CP}=_\pi/2$", "$\delta_{CP}=\pi$"]
+    models_colors = ['g', 'b', 'r', 'orange']
 
-    #plt.plot(x_output , y_output/sum(y_output), label="before")
-    #plt.plot(x_final, y_final/sum(y_s), label="after")
+    fig_2, axs_2 = plt.subplots(1, 2, constrained_layout=True, figsize=(10, 4))
+    fig_2.suptitle("Spectrum at FD")
+    axs_2[0].errorbar(x_output, y_output, np.sqrt(y_output), [(x_output[1]-x_output[0])/4 for _ in x_output], linestyle=None, label="measured")
+    for it, model in enumerate(models):
+        alpha = np.max(y_output[1:])/np.max(model[1:])
+        #alpha = np.sum(y_output[1:])/np.sum(model[1:])
+        axs_2[0].plot(x_after, model*alpha, color =models_colors[it] ,label=model_labels[it])
+    axs_2[0].legend(loc='best')
+    axs_2[0].set_title("Neutrinos in NO")
 
-    plt.xlim([0.2,7])
-    plt.ylim([0,300])
-    plt.legend(loc='best')
-    plt.title("Spectrum at FD")
+
+    models = [  y_after*probability_oscillation(x_after,0, b_neutrino=True, b_normal_hierarchy=False),
+                y_after*probability_oscillation(x_after,90, b_neutrino=True, b_normal_hierarchy=False),
+                y_after*probability_oscillation(x_after,-90, b_neutrino=True, b_normal_hierarchy=False),
+                y_after*probability_oscillation(x_after,180, b_neutrino=True, b_normal_hierarchy=False)]
+    axs_2[1].errorbar(x_output, y_output, np.sqrt(y_output),[(x_output[1]-x_output[0])/4 for _ in x_output], label="measured")
+    for it, model in enumerate(models):
+        alpha = np.max(y_output[1:])/np.max(model[1:])
+        #alpha = np.sum(y_output[1:])/np.sum(model[1:])
+        axs_2[1].plot(x_after, model*alpha, color =models_colors[it] ,label=model_labels[it])
+    axs_2[1].legend(loc='best')
+    axs_2[1].set_title("Neutrinos in IO")
+    
     plt.show()
+'''
+a=[]
+b=[]
+c=[]
+d=[]
+E= 2.5
+a = [   probability_oscillation(E,0, b_neutrino=True, b_normal_hierarchy=True),
+        probability_oscillation(E,90, b_neutrino=True, b_normal_hierarchy=True),
+        probability_oscillation(E,180, b_neutrino=True, b_normal_hierarchy=True),
+        probability_oscillation(E,-90, b_neutrino=True, b_normal_hierarchy=True) ]
+b = [   probability_oscillation(E,0, b_neutrino=True, b_normal_hierarchy=False),
+        probability_oscillation(E,-90, b_neutrino=True, b_normal_hierarchy=False),
+        probability_oscillation(E,-180, b_neutrino=True, b_normal_hierarchy=False),
+        probability_oscillation(E,90, b_neutrino=True, b_normal_hierarchy=False) ]
+c = [   probability_oscillation(E,0, b_neutrino=False, b_normal_hierarchy=True),
+        probability_oscillation(E,90, b_neutrino=False, b_normal_hierarchy=True),
+        probability_oscillation(E,180, b_neutrino=False,b_normal_hierarchy=True),
+        probability_oscillation(E,-90, b_neutrino=False, b_normal_hierarchy=True) ]        
+d = [   probability_oscillation(E,0, b_neutrino=False, b_normal_hierarchy=False),
+        probability_oscillation(E,-90, b_neutrino=False, b_normal_hierarchy=False),
+        probability_oscillation(E,-180, b_neutrino=False, b_normal_hierarchy=False),
+        probability_oscillation(E,90, b_neutrino=False, b_normal_hierarchy=False) ]
 
-
-
-
-
+print(a,c,b,d)
+plt.plot(a,c, linestyle = '--',marker='o',color = 'g', label = 'Normal order')        
+plt.plot(b,d, linestyle = '-.',marker='+', color = 'b', label = 'Inverted order')
+plt.xlabel("Neutrinos")
+plt.ylabel("Antineutrinos")
+plt.legend(loc='best')
+plt.show()
 
 '''
 #e = np.arange(0.1, 10., 0.001) #Neutrino energy uniform 0-10 GeV 
