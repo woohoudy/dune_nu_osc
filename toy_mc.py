@@ -54,7 +54,7 @@ def mc_function(x_ene, f_y, Ntrials, sigma):
             #rint(true_ene)
             rand_energie = rand.gauss(true_ene,sigma)
             if rand_energie > 0.5:
-                new_energie = rand.gauss(rand_energie,0.15)
+                new_energie = rand.gauss(rand_energie,0.15*rand_energie)
                 #print(new_energie)
                 if new_energie > 0.5:
                     new_spectrum.append(new_energie)
@@ -118,7 +118,7 @@ def probability_oscillation(E, dCP, b_neutrino, b_normal_hierarchy):
     
     return Proba
 
-'''
+
 #simulate neutrino flux using measured energy spectrum
 def model_flux(x,y,N,sigma):
     #spectrum = np.loadtxt(txtfile)
@@ -132,7 +132,7 @@ def model_flux(x,y,N,sigma):
 
 if __name__ == '__main__':
 
-    N_ND = 1e7
+    N_ND = 1e6
     N_FD = 1e3
 
     near_detector_spectrum = np.loadtxt('../input.txt')
@@ -227,7 +227,7 @@ plt.ylabel("Antineutrinos")
 plt.legend(loc='best')
 plt.show()
 
-'''
+
 #e = np.arange(0.1, 10., 0.001) #Neutrino energy uniform 0-10 GeV 
 model_incoming_flux = np.array(model_incoming_flux)
 e = np.sort(model_incoming_flux)
