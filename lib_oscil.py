@@ -44,7 +44,8 @@ def model_flux(x,y,N,sigma):
     return flux
 
 #  calculate oscillation probability (Normal Ordering)  [E]-GeV, [L]-km, deltaCP & a
-def probability_oscillation(E=[2.5], dCP=osc_par.delta_CP, b_neutrino=True, b_normal_hierarchy=True):   
+
+def probability_oscillation(E=[2.5], L=1000,dCP=osc_par.delta_CP, b_normal_hierarchy=True, b_neutrino=True  ):   
 
     c1 = np.sin(osc_par.theta23)**2*np.sin(2*osc_par.theta13)**2
     c2 = np.sin(2*osc_par.theta23)*np.sin(2*osc_par.theta13)*np.sin(2*osc_par.theta12)
@@ -58,7 +59,11 @@ def probability_oscillation(E=[2.5], dCP=osc_par.delta_CP, b_neutrino=True, b_no
     else:   
         delta_m3l = osc_par.delta_m32
 
-    L = 1285 # Length in Km
+    if b_neutrino :
+        a = osc_par.a_matter
+    else:
+        a=-1*osc_par.a_matter
+        dCP=-dCP
 
     def D3l(E):
       return(1.267*delta_m3l*L/E)
@@ -69,9 +74,9 @@ def probability_oscillation(E=[2.5], dCP=osc_par.delta_CP, b_neutrino=True, b_no
     if dCP<-180 or dCP>180 : 
         dCP = osc_par.delta_CP
    
-    Proba = c1 * np.sin(D3l(E)-osc_par.a_matter*L)**2/(D3l(E)-osc_par.a_matter*L)**2 * D3l(E)**2 \
-                  + c2 *np.sin(D3l(E)-osc_par.a_matter*L)/(D3l(E)-osc_par.a_matter*L)*D3l(E)*np.sin(osc_par.a_matter*L)/osc_par.a_matter/L \
-                    * D21(E)*np.cos(D3l(E)+np.radians(dCP)) + c3*D21(E)**2*np.sin(osc_par.a_matter*L)**2/(osc_par.a_matter*L)**2
+    Proba = c1 * np.sin(D3l(E)-a*L)**2/(D3l(E)-a*L)**2 * D3l(E)**2 \
+                  + c2 *np.sin(D3l(E)-a*L)/(D3l(E)-a*L)*D3l(E)*np.sin(a*L)/a/L \
+                    * D21(E)*np.cos(D3l(E)+np.radians(dCP)) + c3*D21(E)**2*np.sin(a*L)**2/(a*L)**2
     
     return Proba
 

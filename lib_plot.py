@@ -34,5 +34,7 @@ def compare_data_model(fig_title, ene_data, spec_data, label_data, ene_model, sp
     fig.suptitle(fig_title)    
     axs.legend(loc='best')
 
+
+
 def compare_deltaCP():
  	blablabla
