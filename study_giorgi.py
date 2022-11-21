@@ -10,6 +10,7 @@ Giorgi Kistauri
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import interpolate
 import os, sys, re
 import random as rand
 import lib_oscil as osc_mod
@@ -35,26 +36,39 @@ def show_spectrum_Laura(Energy):
     b = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False ,b_neutrino=True ) for _dCP in deltaCP]
     c = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=False) for _dCP in deltaCP]        
     d = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False , b_neutrino=False) for _dCP in deltaCP] 
-    osc_par.theta23 = np.radians(42)
+    osc_par.theta23 = np.radians(44)
     a2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=True) for _dCP in deltaCP]
     b2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False ,b_neutrino=True ) for _dCP in deltaCP]
     c2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=False) for _dCP in deltaCP]        
     d2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False , b_neutrino=False) for _dCP in deltaCP] 
     
 
-    markers = ['+','o','x','s','+']
-    linestyles = ['--','-.']
-    colors = ['black','black','green','green']
+    markers = ['P','o','X','s','P']
+    linestyles = ['--','--','-.','-.']
+    colors = ['y','black','y','black',]
     labels = ['NO','IO']
     fig, ax = plt.subplots()
     
     #plt.plot(a,c, ls ="--",label ='NO')
     #plt.scatter(a,c, marker = "+",color = ["red", "black","red", "black","red"])
-    mode1 = [a, b, a2, b2]
-    mode2 = [c, d, c2, d2]
-    for i in range(len(mode1)):
-        plt.plot(mode1[i], mode2[i], linestyle = linestyles[0], color = colors[i]) 
-        plt.scatter(mode1[i], mode2[i], marker = markers[i])
+    p_neu = [a, b, a2, b2]
+    p_antineu = [c, d, c2, d2]
+    for i in range(len(p_neu)):
+        #p_neu_new = np.linspace()
+        ax.plot(p_neu[i], p_antineu[i], linestyle = linestyles[i], color = colors[i]) 
+        #l = len(mode1[i])
+        for j in range(len(p_neu[i])):
+            ax.scatter(p_neu[i][j], p_antineu[i][j], marker = markers[j], s = 50, facecolor = colors[i], linewidth = 1, edgecolors = 'red' ) 
+
+    
+    ax.set_xlabel(r'$P ( \nu_\mu \to \nu_e )$')
+    ax.set_ylabel(r'$P ( \~\nu_\mu \to \~\nu_e )$')
+    ax.set_xlim(0.005,0.08)
+    ax.set_ylim(0.005,0.08)
+    ax.set_title("L = 1000 km, E = 2.5 GeV")
+    ax.legend()
+    ax.legend(loc='best')
+
 """
     plt.plot(a,c, linestyle = '--',marker='o',color = 'g', label = 'Normal order,')        
     plt.plot(b,d, linestyle = '--',marker='+', color = 'b', label = 'Inverted order')      
