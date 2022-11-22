@@ -10,7 +10,8 @@ Giorgi Kistauri
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-#import matplotlib.lines as mlines
+import matplotlib.lines as mlines
+import matplotlib.markers as mrks
 from scipy import interpolate 
 import os, sys, re
 import random as rand
@@ -34,7 +35,7 @@ def show_spectrum_Laura(Energy):
 
     #deltaCP = [-90, 0, 90, 180, -90]
     deltaCP = np.linspace(-180,180,360)
-    deltaCP_spec = [0, 90, 180, 270]
+    deltaCP_spec = [89, 179, 269, 359]
 
     a = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=True) for _dCP in deltaCP]
     b = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False ,b_neutrino=True ) for _dCP in deltaCP]
@@ -51,7 +52,7 @@ def show_spectrum_Laura(Energy):
     linestyles = ['--','--','-.','-.']
     colors = ['y','black','y','black',]
     labels = ['NO','IO']
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=(6, 4))
     
     #plt.plot(a,c, ls ="--",label ='NO')
     #plt.scatter(a,c, marker = "+",color = ["red", "black","red", "black","red"])
@@ -59,45 +60,42 @@ def show_spectrum_Laura(Energy):
     p_antinu = [c, d, c2, d2]
 
     for i in range(len(p_nu)):
-        ax.plot(p_nu[i], p_antinu[i], linestyle = linestyles[i], color = colors[i]) 
+        #print(i, p_nu[i], p_antinu[i])
+        ax.plot(np.array(p_nu[i]), np.array(p_antinu[i]), linestyle = linestyles[i], color = colors[i]) 
         for j in range(len(deltaCP_spec)):
             ax.scatter(p_nu[i][deltaCP_spec[j]], p_antinu[i][deltaCP_spec[j]], marker = markers[j], s = 50, facecolor = colors[i], linewidth = 1, edgecolors = 'red') 
 
-"""    
-    ax.set_xlabel(r'$P ( \nu_\mu \to \nu_e )$')
-    ax.set_ylabel(r'$P ( \~\nu_\mu \to \~\nu_e )$')
-    ax.set_xlim(0.005,0.08)
-    ax.set_ylim(0.005,0.08)
-    ax.set_title("L = 1000 km, E = 2.5 GeV")
+    
+    ax.set_xlabel(r'$P ( \nu_\mu \to \nu_e )$', size = 12)
+    ax.set_ylabel(r'$P ( \~\nu_\mu \to \~\nu_e )$', size = 12)
+    #ax.set_xlim(0.005,0.08)
+    #ax.set_ylim(0.005,0.08)
+    ax.set_title("L = 1000 km, E = 2.5 GeV", size = 13)
     ax.legend()
+    plt.xlim(0.005,0.08)
+    plt.ylim(0.005,0.08)
+
+#show_spectrum_Laura(2.5)
+#plt.show()
 
 
 
     y_lines = mlines.Line2D([],[], color = 'y', label = 'Normal order')
     b_lines = mlines.Line2D([],[], color = 'black', label = 'Inverted order')
-    #marker1 = mlines.Line2D([],[], color = 'none', marker = markers[0], label = '$ \delta_CP = %i $'%deltaCP_spec[0])
-    #marker2 = mlines.Line2D([],[], color = 'none', marker = markers[1], label = '$ \delta_CP = %i $'%deltaCP_spec[1])
-    #marker3 = mlines.Line2D([],[], color = 'none', marker = markers[2], label = '$ \delta_CP = %i $'%deltaCP_spec[2])
-    #marker4 = mlines.Line2D([],[], color = 'none', marker = markers[3], label = '$ \delta_CP = %i $'%deltaCP_spec[3])
-    #legend1 = ax.legend(handles = [marker1, marker2, marker3, marker4], loc = 'upper right')
-    legend2 = ax.legend(handles = [y_lines, b_lines], loc='lower left')
-    ax.legend(handles = [b_lines], loc='lower left')
+    dashed_lines = mlines.Line2D([],[], color = 'black', linestyle = '--', label = '$ \Theta > 45^\circ$')
+    dotdashed_lines = mlines.Line2D([],[], color = 'black', linestyle = '-.', label = '$ \Theta < 45^\circ$')
+    marker1 = mlines.Line2D([],[], color = 'black', linestyle = 'none', marker = markers[0], markersize = 6, label = '$ \delta_{CP} = -90^\circ $')
+    marker2 = mlines.Line2D([],[], color = 'black', linestyle = 'none',marker = markers[1], markersize = 6, label = '$ \delta_{CP} = 0^\circ $')
+    marker3 = mlines.Line2D([],[], color = 'black', linestyle = 'none',marker = markers[2], markersize = 6, label = '$ \delta_{CP} = 90^\circ $')
+    marker4 = mlines.Line2D([],[], color = 'black', linestyle = 'none',marker = markers[3], markersize = 6, label = '$ \delta_{CP} = 180^\circ $')
+    legend1 = ax.legend(handles = [marker1, marker2, marker3, marker4], loc = 'upper right')
+    legend2 = ax.legend(handles = [y_lines, b_lines, dashed_lines, dotdashed_lines], loc='lower left')
+    ax.add_artist(legend1)
+    ax.add_artist(legend2)
+    #ax.legend(handles = [b_lines], loc='lower left')
 
 
-    plt.plot(a,c, linestyle = '--',marker='o',color = 'g', label = 'Normal order,')        
-    plt.plot(b,d, linestyle = '--',marker='+', color = 'b', label = 'Inverted order')      
-    plt.plot(a2,c2, linestyle = '-.',marker='o',color = 'g', label = 'Normal order')        
-    plt.plot(b2,d2, linestyle = '-.',marker='+', color = 'b', label = 'Inverted order')
-    plt.xlim(0,0.08)
-    plt.ylim(0,0.08)
-    plt.xlabel("Neutrinos")
-    plt.ylabel("Antineutrinos")
-    plt.legend(loc='best')
-"""
-show_spectrum_Laura(2.5)
-plt.show()
 
-"""
 def show_spectrum_mystery(ene_in, spec_in):
 
     deltaCP = [-90, 0, 90, 180, -90]
@@ -157,7 +155,7 @@ if __name__ == '__main__':
 
     model = spec_FD_mc*max(spec_FD_article)/max(spec_FD_mc)
     osc_plot.compare_data_model("Comparison data/MC expected FD", ene_FD_article, spec_FD_article, "data nu_e FD", ene_ND_mc, model, "FD nu_mu oscillated spectrum")
+
+    show_spectrum_mystery(ene_ND_mc,spec_ND_mc)
     plt.show()
-    #show_spectrum_mystery(ene_ND_mc,spec_ND_mc)
-    #plt.show()
-"""
+
