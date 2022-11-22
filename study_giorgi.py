@@ -3,90 +3,120 @@
 Created on 4th of Nov 2022
 Thibaut Houdy
 
-Last edited 18th of Nov 2022
+Last edited 22th of Nov 2022
 Giorgi Kistauri
 
 """
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+#import matplotlib.lines as mlines
+from scipy import interpolate 
 import os, sys, re
-from scipy.signal import savgol_filter, find_peaks
-#import ROOT
-import argparse
-import time
 import random as rand
-#import uncertainties as u
-from uncertainties import unumpy as unp
-from uncertainties import ufloat as ufl 
-import scipy.stats
-import lib_oscil as osc
-b_debug = False
-b_save = False
+import lib_oscil as osc_mod
+import lib_plot as osc_plot
+import params as osc_par
+from astropy.convolution import Gaussian1DKernel
+from astropy.convolution import convolve
 
 Usage='''
 Usage:
-py toy_mc.py -i                                                           #To get info about the soft usage
+py study_giorgi.py -i                                                           #To get info about the soft usage
 '''
 
 
-if __name__ == '__main__':
+N_ND = 1e6    
+Baseline = 1285 # Length in Km
 
-    N_ND = 1e6
+
+def show_spectrum_Laura(Energy):
+
+    #deltaCP = [-90, 0, 90, 180, -90]
+    deltaCP = np.linspace(-180,180,360)
+    deltaCP_spec = [0, 90, 180, 270]
+
+    a = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=True) for _dCP in deltaCP]
+    b = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False ,b_neutrino=True ) for _dCP in deltaCP]
+    c = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=False) for _dCP in deltaCP]        
+    d = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False , b_neutrino=False) for _dCP in deltaCP] 
+    osc_par.theta23 = np.radians(44)
+    a2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=True) for _dCP in deltaCP]
+    b2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False ,b_neutrino=True ) for _dCP in deltaCP]
+    c2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=True , b_neutrino=False) for _dCP in deltaCP]        
+    d2 = [ osc_mod.probability_oscillation(E=Energy, L=1000, dCP=_dCP,b_normal_hierarchy=False , b_neutrino=False) for _dCP in deltaCP] 
     
-    near_detector_spectrum = np.loadtxt('../input.txt')
-    far_detector_spectrum = np.loadtxt('../output.txt')
 
-    x_input, y_input = [i[0] for i in near_detector_spectrum], [i[1] for i in near_detector_spectrum]
-    x_output, y_output = [i[0] for i in far_detector_spectrum], [i[1] for i in far_detector_spectrum]
+    markers = ['P','o','X','s','P']
+    linestyles = ['--','--','-.','-.']
+    colors = ['y','black','y','black',]
+    labels = ['NO','IO']
+    fig, ax = plt.subplots()
+    
+    #plt.plot(a,c, ls ="--",label ='NO')
+    #plt.scatter(a,c, marker = "+",color = ["red", "black","red", "black","red"])
+    p_nu = [a, b, a2, b2]
+    p_antinu = [c, d, c2, d2]
 
-    #fig, axs = plt.subplots(1, 1, constrained_layout=True, figsize=(10, 4))
-    #scale_factor = np.sum(y_input)/np.sum(y_output)
-    #axs.errorbar(x_input, y_input, np.sqrt(y_input), [(x_input[1]-x_input[0])/4 for _ in x_input],label='input')
-    #axs.errorbar(x_output, np.array(y_output)*scale_factor, np.sqrt(np.array(y_output))*scale_factor, [(x_output[1]-x_output[0])/4 for _ in x_output], label='output')
+    for i in range(len(p_nu)):
+        ax.plot(p_nu[i], p_antinu[i], linestyle = linestyles[i], color = colors[i]) 
+        for j in range(len(deltaCP_spec)):
+            ax.scatter(p_nu[i][deltaCP_spec[j]], p_antinu[i][deltaCP_spec[j]], marker = markers[j], s = 50, facecolor = colors[i], linewidth = 1, edgecolors = 'red') 
+
+"""    
+    ax.set_xlabel(r'$P ( \nu_\mu \to \nu_e )$')
+    ax.set_ylabel(r'$P ( \~\nu_\mu \to \~\nu_e )$')
+    ax.set_xlim(0.005,0.08)
+    ax.set_ylim(0.005,0.08)
+    ax.set_title("L = 1000 km, E = 2.5 GeV")
+    ax.legend()
 
 
 
- 
+    y_lines = mlines.Line2D([],[], color = 'y', label = 'Normal order')
+    b_lines = mlines.Line2D([],[], color = 'black', label = 'Inverted order')
+    #marker1 = mlines.Line2D([],[], color = 'none', marker = markers[0], label = '$ \delta_CP = %i $'%deltaCP_spec[0])
+    #marker2 = mlines.Line2D([],[], color = 'none', marker = markers[1], label = '$ \delta_CP = %i $'%deltaCP_spec[1])
+    #marker3 = mlines.Line2D([],[], color = 'none', marker = markers[2], label = '$ \delta_CP = %i $'%deltaCP_spec[2])
+    #marker4 = mlines.Line2D([],[], color = 'none', marker = markers[3], label = '$ \delta_CP = %i $'%deltaCP_spec[3])
+    #legend1 = ax.legend(handles = [marker1, marker2, marker3, marker4], loc = 'upper right')
+    legend2 = ax.legend(handles = [y_lines, b_lines], loc='lower left')
+    ax.legend(handles = [b_lines], loc='lower left')
 
-    y_spec, x_spec = np.histogram(osc.model_flux(x_input,y_input,N_ND,0.25), bins=50, range=[0.5,6])
-    #y_s, x_s = np.histogram(model_flux(x_output,y_output,N_FD,0.3),bins = 25)
 
-    x_after = x_spec[:-1]
-    y_after = 1.9*y_spec*1e6
-    #x_s = x_s[:-1]
+    plt.plot(a,c, linestyle = '--',marker='o',color = 'g', label = 'Normal order,')        
+    plt.plot(b,d, linestyle = '--',marker='+', color = 'b', label = 'Inverted order')      
+    plt.plot(a2,c2, linestyle = '-.',marker='o',color = 'g', label = 'Normal order')        
+    plt.plot(b2,d2, linestyle = '-.',marker='+', color = 'b', label = 'Inverted order')
+    plt.xlim(0,0.08)
+    plt.ylim(0,0.08)
+    plt.xlabel("Neutrinos")
+    plt.ylabel("Antineutrinos")
+    plt.legend(loc='best')
+"""
+show_spectrum_Laura(2.5)
+plt.show()
 
-    # compare input and simulated energies
-    fig, axs = plt.subplots(1, 1, constrained_layout=True, figsize=(10, 4))
-    axs.plot(x_input, y_input/max(y_input),label='input')
-    axs.plot(x_after, y_after/max(y_after),label='simulated')
-    axs.legend(loc='best')
- #   plt.show()
+"""
+def show_spectrum_mystery(ene_in, spec_in):
 
+    deltaCP = [-90, 0, 90, 180, -90]
     # spectrum at FD
-    models = [  y_after*osc.probability_oscillation(x_after,0, b_neutrino=True, b_normal_hierarchy=True),
-                y_after*osc.probability_oscillation(x_after,90, b_neutrino=True, b_normal_hierarchy=True),
-                y_after*osc.probability_oscillation(x_after,-90, b_neutrino=True, b_normal_hierarchy=True),
-                y_after*osc.probability_oscillation(x_after,180, b_neutrino=True, b_normal_hierarchy=True)]
+    models = [ spec_in*osc_mod.probability_oscillation(E=ene_in,L=Baseline,dCP=_dCP,b_normal_hierarchy=True ,b_neutrino=True) for _dCP in deltaCP]
 
-    model_labels = ["$\delta_{CP}=0$", "$\delta_{CP}=\pi/2$", "$\delta_{CP}=_\pi/2$", "$\delta_{CP}=\pi$"]
-    models_colors = ['g', 'b', 'r', 'orange']
+    model_labels = ["$\delta_{CP}=%i$"%_dCP for _dCP in deltaCP]
+    models_colors = ['g', 'b', 'r', 'orange', 'yellow', '']
 
     fig_2, axs_2 = plt.subplots(1, 2, constrained_layout=True, figsize=(10, 4))
     fig_2.suptitle("Spectrum at FD")
     axs_2[0].errorbar(x_output, y_output, np.sqrt(y_output), [(x_output[1]-x_output[0])/4 for _ in x_output], linestyle=None, label="measured")
-    for it, model in enumerate(models):
+    for it, model in enumeratlse(models):
         alpha = np.max(y_output[1:])/np.max(model[1:])
-        #alpha = np.sum(y_output[1:])/np.sum(model[1:])
         axs_2[0].plot(x_after, model*alpha, color =models_colors[it] ,label=model_labels[it])
     axs_2[0].legend(loc='best')
     axs_2[0].set_title("Neutrinos in NO")
-
-
-    models = [  y_after*osc.probability_oscillation(x_after,0, b_neutrino=True, b_normal_hierarchy=False),
-                y_after*osc.probability_oscillation(x_after,90, b_neutrino=True, b_normal_hierarchy=False),
-                y_after*osc.probability_oscillation(x_after,-90, b_neutrino=True, b_normal_hierarchy=False),
-                y_after*osc.probability_oscillation(x_after,180, b_neutrino=True, b_normal_hierarchy=False)]
+    
+    models = [  spec_in*osc_mod.probability_oscillation(E=x_after, L=Baseline, dCP=_dCP,b_normal_hierarchy=False, b_neutrino=True ) for _dCP in deltaCP]
     axs_2[1].errorbar(x_output, y_output, np.sqrt(y_output),[(x_output[1]-x_output[0])/4 for _ in x_output], label="measured")
     for it, model in enumerate(models):
         alpha = np.max(y_output[1:])/np.max(model[1:])
@@ -95,126 +125,39 @@ if __name__ == '__main__':
     axs_2[1].legend(loc='best')
     axs_2[1].set_title("Neutrinos in IO")
 
-    plt.show()
+def check_chi2(model, data):
 
-
-    #fig_3, axs_3 = plt.subplots(1, 3, constrained_layout=True, figsize=(10, 4))
-    #data = y_s
-    model = y_after*probability_oscillation(x_after,0, b_neutrino=True, b_normal_hierarchy=True)
-    print(len(model))
-    bins = np.linspace(0,10,50)
-    plt.hist(model, bins =bins )
-    plt.show()
-'''
     chi2 = sum ( [ ((model - data)/np.sqrt(model))])  
     fig_3[1].suptitle("chi2")
     axs_3[1].hist(all_chi2, bins = bins, color='b')
     #axs_3.plot(bins, scipy.stats.chi2.pdf(bins,))
     axs_3[1].legend(loc='best')
     axs_3[1].legend("chi2_neutrino_NO")
-'''
-    
 
-'''
-a=[]
-b=[]
-c=[]
-d=[]
-E= 2.5
-a = [   probability_oscillation(E,0, b_neutrino=True, b_normal_hierarchy=True),
-        probability_oscillation(E,90, b_neutrino=True, b_normal_hierarchy=True),
-        probability_oscillation(E,180, b_neutrino=True, b_normal_hierarchy=True),
-        probability_oscillation(E,-90, b_neutrino=True, b_normal_hierarchy=True) ]
-b = [   probability_oscillation(E,0, b_neutrino=True, b_normal_hierarchy=False),
-        probability_oscillation(E,-90, b_neutrino=True, b_normal_hierarchy=False),
-        probability_oscillation(E,-180, b_neutrino=True, b_normal_hierarchy=False),
-        probability_oscillation(E,90, b_neutrino=True, b_normal_hierarchy=False) ]
-c = [   probability_oscillation(E,0, b_neutrino=False, b_normal_hierarchy=True),
-        probability_oscillation(E,90, b_neutrino=False, b_normal_hierarchy=True),
-        probability_oscillation(E,180, b_neutrino=False,b_normal_hierarchy=True),
-        probability_oscillation(E,-90, b_neutrino=False, b_normal_hierarchy=True) ]        
-d = [   probability_oscillation(E,0, b_neutrino=False, b_normal_hierarchy=False),
-        probability_oscillation(E,-90, b_neutrino=False, b_normal_hierarchy=False),
-        probability_oscillation(E,-180, b_neutrino=False, b_normal_hierarchy=False),
-        probability_oscillation(E,90, b_neutrino=False, b_normal_hierarchy=False) ]
-
-print(a,c,b,d)
-plt.plot(a,c, linestyle = '--',marker='o',color = 'g', label = 'Normal order')        
-plt.plot(b,d, linestyle = '-.',marker='+', color = 'b', label = 'Inverted order')
-plt.xlabel("Neutrinos")
-plt.ylabel("Antineutrinos")
-plt.legend(loc='best')
-plt.show()
+if __name__ == '__main__':
 
 
-#e = np.arange(0.1, 10., 0.001) #Neutrino energy uniform 0-10 GeV 
-model_incoming_flux = np.array(model_incoming_flux)
-e = np.sort(model_incoming_flux)
-#print(type(e))
-#print(p)
+    #Muonic neutrinos at ND from arXiv:2109.01304v1
+    near_detector_spectrum = np.loadtxt('data/input.txt')
+    ene_ND_article, spec_ND_article = [i[0] for i in near_detector_spectrum], [i[1]*1e6 for i in near_detector_spectrum]
 
+    #Electronic neutrinos at FD from arXiv:2109.01304v1
+    far_detector_spectrum = np.loadtxt('data/output.txt')
+    ene_FD_article, spec_FD_article = [i[0] for i in far_detector_spectrum], [i[1] for i in far_detector_spectrum]
 
-#visualize
-plt.figure(1) #Ntrials
-#plt.subplot(221)
-#dCP & a positive for neutrinos
+    list_ND_mc = osc_mod.model_flux(ene_ND_article, spec_ND_article, N_ND, 0.25)
 
+    spec_ND_mc, ene_ND_mc = np.histogram(list_ND_mc, bins=50, range=[0.2,6])
+    ene_ND_mc = ene_ND_mc[:-1]
+    #print(ene_ND_mc)
 
+    spec_nue_mc = spec_ND_mc*osc_mod.probability_oscillation(E=ene_ND_mc, L=Baseline, dCP=-500, b_neutrino=True, b_normal_hierarchy=True)
+    resolution = Gaussian1DKernel(stddev=2.5)
+    spec_FD_mc = convolve(spec_nue_mc, resolution, normalize_kernel=True, boundary="extend")
 
-plt.plot(e,p_NO(e,0, a1),color='g', label='d_CP = 0')
-plt.plot(e,p_NO(e,90,a1),color='r', label='d_CP = pi/2')
-plt.plot(e,p_NO(e,-90,a1), color='b',label='d_CP = -pi/2')
-plt.plot(e,p_NO(e,180,a1), color='orange',label='d_CP = pi') 
-plt.xlim([0, 6])
-plt.ylim([0, 0.2])
-#plt.xlabel('Energy')
-plt.ylabel('Probability')
-#plt.xscale('log')
-plt.title("Neutrino_NO")
-plt.legend()
-
-plt.subplot(222)
-#dCP & a negative for antineutrinos
-plt.plot(e,p_NO(e,0,a2), color='g',label='d_CP = 0')
-plt.plot(e,p_NO(e,-90, a2), color='r', label='d_CP = pi/2')
-plt.plot(e,p_NO(e,90,a2), color='b',label='d_CP = -pi/2')
-plt.plot(e,p_NO(e,-180, a2), color='orange', label='d_CP = pi')
-plt.xlim([0, 6])
-plt.ylim([0, 0.2])
-#plt.xlabel('Energy')
-plt.ylabel('Probability')
-#plt.xscale('log')
-plt.title("Antineutrino_NO")
-plt.legend()
-
-plt.subplot(223)
-#dCP & a positive for neutrinos
-plt.plot(e,p_IO(e,0, a1),color='g', label='d_CP = 0')
-plt.plot(e,p_IO(e,90,a1),color='r', label='d_CP = pi/2') 
-plt.plot(e,p_IO(e,-90, a1),color='b', label='d_CP = -pi/2')
-plt.plot(e,p_IO(e,180,a1),color='orange', label='d_CP = pi') 
-plt.xlim([0, 6])
-plt.ylim([0, 0.2])
-plt.xlabel('Energy')
-plt.ylabel('Probability')
-#plt.xscale('log')
-plt.title("Neutrino_IO")
-plt.legend()
-
-plt.subplot(224)
-#dCP & a negative for antineutrinos
-plt.plot(e,p_IO(e,0,a2), color='g',label='d_CP = 0')
-plt.plot(e,p_IO(e,-90, a2), color='r', label='d_CP = pi/2')
-plt.plot(e,p_IO(e,90,a2), color='b',label='d_CP = -pi/2')
-plt.plot(e,p_IO(e,-180, a2), color='orange', label='d_CP = pi')
-plt.xlim([0, 6])
-plt.ylim([0, 0.2])
-plt.xlabel('Energy')
-plt.ylabel('Probability')
-#plt.xscale('log')
-plt.title("Antineutrino_IO")
-plt.legend()
-
-plt.show()
-plt.savefig('osc_pic.png', bbox_inches='tight')
-'''
+    model = spec_FD_mc*max(spec_FD_article)/max(spec_FD_mc)
+    osc_plot.compare_data_model("Comparison data/MC expected FD", ene_FD_article, spec_FD_article, "data nu_e FD", ene_ND_mc, model, "FD nu_mu oscillated spectrum")
+    plt.show()
+    #show_spectrum_mystery(ene_ND_mc,spec_ND_mc)
+    #plt.show()
+"""
