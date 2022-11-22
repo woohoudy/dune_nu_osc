@@ -26,8 +26,6 @@ def neutrinos(b_neutrinos):
     else:
         a_matter = - 1/3500  # -GfNe/sqrt(2) for antineutrinos
         delta_CP = -1*delta_CP
-        
-
 
 def normal_hierarchy(b_normal_hierarchy):
 
