@@ -17,7 +17,7 @@ delta_CP = np.radians(215)
 delta_m21 = 7.42e-5 #eV2
 delta_m31 = 2.515*pow(10,-3) #eV2
 delta_m32 = -2.498*pow(10,-3) #in eV^2 in NO
-a_matter = 1/3500  # GfNe/sqrt(2) for neutrino
+a_matter = 1/3500*2.845/3  # GfNe/sqrt(2) for neutrino
 
 def neutrinos(b_neutrinos):
 

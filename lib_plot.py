@@ -17,8 +17,8 @@ import params as osc_par
 def check_input_with_mc(ene_article, spec_article, ene_mc, spec_mc):
     # compare input and simulated energies
     fig, axs = plt.subplots(1, 1, constrained_layout=True, figsize=(10, 4))
-    axs.plot(ene_article, spec_article,label='article')
-    axs.plot(ene_mc, spec_mc,label='simulated')
+    axs.plot(ene_article, spec_article,label='article', marker = 'o', linestyle='None', color='red')
+    axs.bar(ene_mc, spec_mc,label='simulated', alpha = 0.8, width=0.05, color='grey')
     axs.set_xlabel("Energy [GeV]")
     axs.set_ylabel("#/GeV")
     fig.suptitle("Generating our own MC input data from article")    
