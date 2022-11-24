@@ -3,7 +3,7 @@
 Created on 4th of Nov 2022
 Thibaut Houdy
 
-Last edited 22th of Nov 2022
+Last edited 24th of Nov 2022
 Giorgi Kistauri
 
 """
@@ -91,7 +91,7 @@ def show_spectrum_Laura(Energy=2.5, l_baseline=1000):
     ax.add_artist(legend1)
     ax.add_artist(legend2)
     #ax.legend(handles = [b_lines], loc='lower left')
-
+    plt.show()
 
 
 def show_spectrum_mystery():
@@ -273,11 +273,13 @@ def show_chi2():
 
 
 if __name__ == '__main__':
-
+    
+    #show_spectrum_Laura(Energy=2.5, l_baseline=1285)
+    #plot_input_mc()
+    #plot_FD_data()
     #show_spectrum_mystery()
-    show_spectrum_Laura(Energy=2.5, l_baseline=1285)
-    #plt.savefig("Laura_plot_1285km.png")
-    #plt.show()
     #show_chi2()
+   
+    
 
 

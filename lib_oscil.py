@@ -3,7 +3,7 @@
 Created on 4th of Nov 2022
 Thibaut Houdy
 
-Last edited 18th of Nov 2022
+Last edited 24th of Nov 2022
 Giorgi Kistauri
 
 """
@@ -56,9 +56,7 @@ def probability_oscillation(E=[2.5], L=1000, dCP=osc_par.delta_CP, b_normal_hier
 
     if b_normal_hierarchy:
         delta_m3l = osc_par.delta_m31
-        #dCP = np.radians(194)
     else:
-        #dCP = np.radians(287)  
         delta_m3l = osc_par.delta_m32
 
     if b_neutrino :
