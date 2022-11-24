@@ -248,10 +248,12 @@ def show_chi2():
     t = interpolate.splrep(ene_FD_article, spec_FD_article, s=0)
     new_ene_FD_article = np.linspace(min(ene_FD_article),max(ene_FD_article),50)
     new_spec_FD_article = interpolate.splev(new_ene_FD_article,t,der =0)
-
-    deltaCP = [-90, 0, 90, 180, -90]
+    
+    chi2s =[]
+    #deltaCP = [-90, 0, 90, 180]
+    deltaCP = np.linspace(-180,180,360)
     for dCP in deltaCP:
-        chi2s =[]
+
         spec_nue_mc = spec_ND_mc*osc_mod.probability_oscillation(E=ene_ND_mc, L=Baseline, dCP=dCP, b_neutrino=True, b_normal_hierarchy=True)
         resolution = Gaussian1DKernel(stddev=2.5)
         spec_FD_mc = convolve(spec_nue_mc, resolution, normalize_kernel=True, boundary="extend")
@@ -259,17 +261,10 @@ def show_chi2():
 
         chi2s.append(chi2(new_spec_FD_article,model))
 
-    plt.plot(dCP, chi2s, linestyle='blue')
+    plt.plot(deltaCP, chi2s, color='blue')
+    plt.xlabel('$ \delta_{CP}$')
+    plt.ylabel('$ \chi^2  $')
     plt.show()
-#    plt.plot(new_ene_FD_article,new_spec_FD_article, linestyle='none', marker='o')
-#   plt.plot(ene_FD_article,spec_FD_article,linestyle='none', marker='+')
-    
-
-    
-#    minimize_chi2(deltaCP)
-
-#    plt.show()
-
 
 
 if __name__ == '__main__':
